@@ -28,6 +28,7 @@ function wc_email_cart_create_table() {
         product_name varchar(255) NOT NULL,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         reminder_sent TINYINT(1) DEFAULT 0,
+        status varchar(50) DEFAULT 'pending',
         PRIMARY KEY  (id)
     ) $charset_collate;";
     
@@ -189,15 +190,17 @@ function wc_store_email_in_session($cart_item_data, $product_id) {
         $email = sanitize_email($_POST['customer_email']);
         $product = wc_get_product($product_id);
         
-        // Store in database
+        // Store in database with explicit status
         $wpdb->insert(
             $wpdb->prefix . 'wc_email_cart_tracking',
             array(
                 'email' => $email,
                 'product_id' => $product_id,
-                'product_name' => $product->get_name()
+                'product_name' => $product->get_name(),
+                'status' => 'pending',
+                'created_at' => current_time('mysql')
             ),
-            array('%s', '%d', '%s')
+            array('%s', '%d', '%s', '%s', '%s')
         );
         
         // Store in session
@@ -353,14 +356,28 @@ function wc_email_cart_update_db() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
     
-    $column = $wpdb->get_results($wpdb->prepare(
+    // Check for reminder_sent column
+    $reminder_column = $wpdb->get_results($wpdb->prepare(
         "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'reminder_sent'",
         DB_NAME,
         $table_name
     ));
 
-    if (empty($column)) {
+    if (empty($reminder_column)) {
         $wpdb->query("ALTER TABLE $table_name ADD reminder_sent TINYINT(1) DEFAULT 0");
+    }
+
+    // Check for status column
+    $status_column = $wpdb->get_results($wpdb->prepare(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'status'",
+        DB_NAME,
+        $table_name
+    ));
+
+    if (empty($status_column)) {
+        $wpdb->query("ALTER TABLE $table_name ADD status varchar(50) DEFAULT 'pending'");
+        // Update existing rows to have 'pending' status
+        $wpdb->query("UPDATE $table_name SET status = 'pending' WHERE status IS NULL");
     }
 }
 register_activation_hook(__FILE__, 'wc_email_cart_update_db');
@@ -391,5 +408,23 @@ function wc_email_cart_admin_scripts($hook) {
     wp_enqueue_script('wc-email-cart-admin', plugins_url('assets/js/admin.js', __FILE__), array('jquery'), '1.0', true);
 }
 add_action('admin_enqueue_scripts', 'wc_email_cart_admin_scripts');
+
+// Add these new functions for order status tracking
+function wc_track_order_status($order_id) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
+    
+    $order = wc_get_order($order_id);
+    $email = $order->get_billing_email();
+    
+    // Update all entries for this email
+    $wpdb->update(
+        $table_name,
+        array('status' => 'purchased'),
+        array('email' => $email)
+    );
+}
+add_action('woocommerce_order_status_completed', 'wc_track_order_status');
+add_action('woocommerce_order_status_processing', 'wc_track_order_status');
 
 ?>
