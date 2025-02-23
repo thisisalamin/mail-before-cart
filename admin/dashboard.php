@@ -98,7 +98,7 @@ function wc_email_cart_display_dashboard() {
             <div class="text-gray-600">Total Emails</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div class="text-2xl font-bold text-green-600"><?php echo esc_html($stats->total_conversions); ?></div>
+            <div class="text-2xl font-bold text-green-600"><?php echo esc_html($stats->total_reminders); ?></div>
             <div class="text-gray-600">Reminder Sent</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">

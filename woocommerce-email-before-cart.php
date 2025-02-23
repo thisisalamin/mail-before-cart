@@ -503,12 +503,16 @@ add_filter('cron_schedules', 'wc_email_cart_cron_schedules');
 // Register cron job on plugin activation
 register_activation_hook(__FILE__, 'wc_email_cart_activate');
 function wc_email_cart_activate() {
+    error_log('Activating WC Email Cart plugin');
+    
     // Clear any existing schedule
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
     
     // Get reminder settings
     $reminder_value = get_option('wc_email_cart_reminder_value', 1);
     $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes');
+    
+    error_log("Setting up cron with: Value = $reminder_value, Unit = $reminder_unit");
     
     // Calculate interval in seconds
     $interval_seconds = match($reminder_unit) {
@@ -529,13 +533,12 @@ function wc_email_cart_activate() {
         );
         return $schedules;
     });
-    
+
     // Schedule new event with custom interval
     if (!wp_next_scheduled('wc_email_cart_send_reminders')) {
         wp_schedule_event(time(), 'custom_reminder_interval', 'wc_email_cart_send_reminders');
+        error_log('Scheduled wc_email_cart_send_reminders with interval: ' . $interval_seconds . ' seconds');
     }
-    
-    error_log('WC Email Cart activated with custom interval: ' . $interval_seconds . ' seconds');
 }
 
 // Unregister cron job on plugin deactivation
@@ -549,7 +552,7 @@ add_action('wc_email_cart_send_reminders', 'wc_process_abandoned_cart_reminders'
 
 // Combined function for processing abandoned cart reminders
 function wc_process_abandoned_cart_reminders() {
-    error_log('Starting abandoned cart reminder process');
+    error_log('Starting abandoned cart reminder process at: ' . current_time('mysql'));
     
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
@@ -566,25 +569,18 @@ function wc_process_abandoned_cart_reminders() {
         default => "INTERVAL {$reminder_value} MINUTE"
     };
     
-    // Log the SQL query for debugging
+    // Get pending reminders
     $query = $wpdb->prepare("
         SELECT * FROM {$table_name} 
         WHERE status = 'pending' 
         AND reminder_sent = 0 
-        AND created_at < DATE_SUB(NOW(), {$interval})
+        AND created_at < DATE_SUB(NOW(), $interval)
     ");
-    error_log('Query: ' . $query);
     
-    // Get pending reminders
     $pending_reminders = $wpdb->get_results($query);
-    
-    // Log number of found reminders
     error_log('Found ' . count($pending_reminders) . ' pending reminders');
 
-    if (empty($pending_reminders)) {
-        error_log('No pending reminders found');
-        return;
-    }
+    $reminders_sent = 0;
 
     foreach ($pending_reminders as $cart) {
         $subject = get_option('wc_email_cart_reminder_subject', 'Complete Your Purchase');
@@ -600,26 +596,41 @@ function wc_process_abandoned_cart_reminders() {
 
         $headers = array('Content-Type: text/html; charset=UTF-8');
         
-        // Send email and log result
         $sent = wp_mail($cart->email, $subject, $message, $headers);
         error_log('Sending email to ' . $cart->email . ': ' . ($sent ? 'Success' : 'Failed'));
         
         if ($sent) {
-            $wpdb->update(
+            $updated = $wpdb->update(
                 $table_name,
                 array(
                     'reminder_sent' => 1,
-                    'last_reminder_date' => current_time('mysql')
+                    'status' => 'reminder_sent'
                 ),
-                array('id' => $cart->id)
+                array('id' => $cart->id),
+                array('%d', '%s'),
+                array('%d')
             );
-            error_log('Updated reminder_sent status for ID: ' . $cart->id);
+            
+            if ($updated) {
+                $reminders_sent++;
+                error_log('Successfully updated reminder status for ID: ' . $cart->id);
+            } else {
+                error_log('Failed to update reminder status for ID: ' . $cart->id . '. Database error: ' . $wpdb->last_error);
+            }
         }
     }
+
+    error_log('Completed sending reminders. Total sent: ' . $reminders_sent);
 }
 
 // Add function to update cron schedule when settings are saved
 function wc_update_reminder_schedule() {
+    // Get new settings
+    $reminder_value = get_option('wc_email_cart_reminder_value', 1);
+    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes');
+    
+    error_log("Updating cron schedule: Value = $reminder_value, Unit = $reminder_unit");
+    
     // Reschedule the cron job
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
     wc_email_cart_activate();
