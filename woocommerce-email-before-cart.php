@@ -43,7 +43,10 @@ function wc_enqueue_tailwind_css() {
 add_action('wp_enqueue_scripts', 'wc_enqueue_tailwind_css');
 
 // Enqueue Tailwind CSS for admin
-function wc_enqueue_admin_tailwind_css() {
+function wc_enqueue_admin_tailwind_css($hook) {
+    if ('woocommerce_page_wc-abandoned-emails' !== $hook) {
+        return;
+    }
     wp_enqueue_style('tailwind-css-admin', 'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 }
 add_action('admin_enqueue_scripts', 'wc_enqueue_admin_tailwind_css');
@@ -107,7 +110,22 @@ function wc_email_cart_reminder_days_cb() {
 }
 
 // Email validation to ensure it's not already in the database
+// Modified email input field display function
 function wc_email_before_add_to_cart() {
+    global $product;
+
+    // Don't show email field if:
+    // 1. Product is out of stock
+    // 2. Product is not purchasable
+    // 3. Product type doesn't support add to cart
+    if (!$product || 
+        !$product->is_purchasable() || 
+        !$product->is_in_stock() || 
+        $product->is_type('external') || 
+        ($product->is_type('variable') && !$product->has_child())) {
+        return;
+    }
+
     $label = get_option('wc_email_cart_label', 'Enter Your Email to Add to Cart:');
     $placeholder = get_option('wc_email_cart_placeholder', 'your@email.com');
     ?>
