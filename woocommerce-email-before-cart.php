@@ -87,9 +87,29 @@ function wc_email_cart_settings_init() {
         'wc_email_cart_settings'
     );
 
+    // Reminder Email Timing Value
+    add_settings_field(
+        'wc_email_cart_reminder_value',
+        'Reminder Time Value',
+        'wc_email_cart_reminder_value_cb',
+        'wc_email_cart',
+        'wc_email_cart_settings'
+    );
+
+    // Reminder Email Timing Unit
+    add_settings_field(
+        'wc_email_cart_reminder_unit',
+        'Reminder Time Unit',
+        'wc_email_cart_reminder_unit_cb',
+        'wc_email_cart',
+        'wc_email_cart_settings'
+    );
+
     register_setting('wc_email_cart', 'wc_email_cart_label');
     register_setting('wc_email_cart', 'wc_email_cart_placeholder');
     register_setting('wc_email_cart', 'wc_email_cart_reminder_days');
+    register_setting('wc_email_cart', 'wc_email_cart_reminder_value');
+    register_setting('wc_email_cart', 'wc_email_cart_reminder_unit');
 }
 add_action('admin_init', 'wc_email_cart_settings_init');
 
@@ -107,6 +127,22 @@ function wc_email_cart_placeholder_cb() {
 function wc_email_cart_reminder_days_cb() {
     $days = get_option('wc_email_cart_reminder_days', 1);
     echo "<input type='number' class='small-text' name='wc_email_cart_reminder_days' value='" . esc_attr($days) . "'>";
+}
+
+function wc_email_cart_reminder_value_cb() {
+    $value = get_option('wc_email_cart_reminder_value', 1);
+    echo "<input type='number' min='1' class='small-text' name='wc_email_cart_reminder_value' value='" . esc_attr($value) . "'>";
+}
+
+function wc_email_cart_reminder_unit_cb() {
+    $unit = get_option('wc_email_cart_reminder_unit', 'minutes');
+    ?>
+    <select name="wc_email_cart_reminder_unit">
+        <option value="minutes" <?php selected($unit, 'minutes'); ?>>Minutes</option>
+        <option value="hours" <?php selected($unit, 'hours'); ?>>Hours</option>
+        <option value="days" <?php selected($unit, 'days'); ?>>Days</option>
+    </select>
+    <?php
 }
 
 // Email validation to ensure it's not already in the database
@@ -470,13 +506,36 @@ function wc_email_cart_activate() {
     // Clear any existing schedule
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
     
-    // Schedule new event
+    // Get reminder settings
+    $reminder_value = get_option('wc_email_cart_reminder_value', 1);
+    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes');
+    
+    // Calculate interval in seconds
+    $interval_seconds = match($reminder_unit) {
+        'minutes' => $reminder_value * 60,
+        'hours' => $reminder_value * 3600,
+        'days' => $reminder_value * 86400,
+        default => $reminder_value * 60
+    };
+    
+    // Add custom interval
+    add_filter('cron_schedules', function($schedules) use ($interval_seconds) {
+        $schedules['custom_reminder_interval'] = array(
+            'interval' => $interval_seconds,
+            'display' => sprintf('Every %d %s', 
+                get_option('wc_email_cart_reminder_value', 1),
+                get_option('wc_email_cart_reminder_unit', 'minutes')
+            )
+        );
+        return $schedules;
+    });
+    
+    // Schedule new event with custom interval
     if (!wp_next_scheduled('wc_email_cart_send_reminders')) {
-        wp_schedule_event(time(), 'every_minute', 'wc_email_cart_send_reminders');
+        wp_schedule_event(time(), 'custom_reminder_interval', 'wc_email_cart_send_reminders');
     }
     
-    // Log activation
-    error_log('WC Email Cart activated and cron scheduled');
+    error_log('WC Email Cart activated with custom interval: ' . $interval_seconds . ' seconds');
 }
 
 // Unregister cron job on plugin deactivation
@@ -490,7 +549,6 @@ add_action('wc_email_cart_send_reminders', 'wc_process_abandoned_cart_reminders'
 
 // Combined function for processing abandoned cart reminders
 function wc_process_abandoned_cart_reminders() {
-    // Enable error logging
     error_log('Starting abandoned cart reminder process');
     
     global $wpdb;
@@ -498,23 +556,23 @@ function wc_process_abandoned_cart_reminders() {
     
     // Get reminder settings
     $reminder_value = get_option('wc_email_cart_reminder_value', 1);
-    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes'); // Changed default to minutes
+    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes');
     
     // Convert time based on unit
     $interval = match($reminder_unit) {
-        'minutes' => "INTERVAL 1 MINUTE", // Hardcoded to 1 minute for testing
+        'minutes' => "INTERVAL {$reminder_value} MINUTE",
         'hours' => "INTERVAL {$reminder_value} HOUR",
         'days' => "INTERVAL {$reminder_value} DAY",
-        default => "INTERVAL 1 MINUTE"
+        default => "INTERVAL {$reminder_value} MINUTE"
     };
     
     // Log the SQL query for debugging
-    $query = "
-        SELECT * FROM $table_name 
+    $query = $wpdb->prepare("
+        SELECT * FROM {$table_name} 
         WHERE status = 'pending' 
         AND reminder_sent = 0 
-        AND created_at < DATE_SUB(NOW(), $interval)
-    ";
+        AND created_at < DATE_SUB(NOW(), {$interval})
+    ");
     error_log('Query: ' . $query);
     
     // Get pending reminders
@@ -559,5 +617,14 @@ function wc_process_abandoned_cart_reminders() {
         }
     }
 }
+
+// Add function to update cron schedule when settings are saved
+function wc_update_reminder_schedule() {
+    // Reschedule the cron job
+    wp_clear_scheduled_hook('wc_email_cart_send_reminders');
+    wc_email_cart_activate();
+}
+add_action('update_option_wc_email_cart_reminder_value', 'wc_update_reminder_schedule');
+add_action('update_option_wc_email_cart_reminder_unit', 'wc_update_reminder_schedule');
 
 ?>
