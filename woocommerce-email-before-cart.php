@@ -467,10 +467,16 @@ add_filter('cron_schedules', 'wc_email_cart_cron_schedules');
 // Register cron job on plugin activation
 register_activation_hook(__FILE__, 'wc_email_cart_activate');
 function wc_email_cart_activate() {
-    // Schedule reminder check if not already scheduled
+    // Clear any existing schedule
+    wp_clear_scheduled_hook('wc_email_cart_send_reminders');
+    
+    // Schedule new event
     if (!wp_next_scheduled('wc_email_cart_send_reminders')) {
         wp_schedule_event(time(), 'every_minute', 'wc_email_cart_send_reminders');
     }
+    
+    // Log activation
+    error_log('WC Email Cart activated and cron scheduled');
 }
 
 // Unregister cron job on plugin deactivation
@@ -482,53 +488,65 @@ function wc_email_cart_deactivate() {
 // Hook the reminder sending function to the cron event
 add_action('wc_email_cart_send_reminders', 'wc_process_abandoned_cart_reminders');
 
-// Function to process and send reminders
+// Combined function for processing abandoned cart reminders
 function wc_process_abandoned_cart_reminders() {
+    // Enable error logging
+    error_log('Starting abandoned cart reminder process');
+    
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
     
     // Get reminder settings
     $reminder_value = get_option('wc_email_cart_reminder_value', 1);
-    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'days');
+    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes'); // Changed default to minutes
     
     // Convert time based on unit
     $interval = match($reminder_unit) {
-        'minutes' => "INTERVAL {$reminder_value} MINUTE",
+        'minutes' => "INTERVAL 1 MINUTE", // Hardcoded to 1 minute for testing
         'hours' => "INTERVAL {$reminder_value} HOUR",
         'days' => "INTERVAL {$reminder_value} DAY",
-        default => "INTERVAL {$reminder_value} DAY"
+        default => "INTERVAL 1 MINUTE"
     };
     
-    // Get all pending entries that need reminders
-    $pending_reminders = $wpdb->get_results($wpdb->prepare("
+    // Log the SQL query for debugging
+    $query = "
         SELECT * FROM $table_name 
         WHERE status = 'pending' 
         AND reminder_sent = 0 
         AND created_at < DATE_SUB(NOW(), $interval)
-    "));
+    ";
+    error_log('Query: ' . $query);
+    
+    // Get pending reminders
+    $pending_reminders = $wpdb->get_results($query);
+    
+    // Log number of found reminders
+    error_log('Found ' . count($pending_reminders) . ' pending reminders');
 
     if (empty($pending_reminders)) {
+        error_log('No pending reminders found');
         return;
     }
 
     foreach ($pending_reminders as $cart) {
-        // Get reminder template
         $subject = get_option('wc_email_cart_reminder_subject', 'Complete Your Purchase');
-        $template = get_option('wc_email_reminder_template', wc_email_cart_get_default_template());
-        
-        // Replace placeholders in template
-        $message = str_replace(
-            ['{site_name}', '{customer_name}', '{cart_items}', '{cart_link}', '{email}'],
-            [get_bloginfo('name'), '', $cart->product_name, wc_get_cart_url(), $cart->email],
-            $template
-        );
-        
-        // Send reminder email
+        $message = '
+        <html>
+        <body style="font-family: Arial, sans-serif;">
+            <h2>Don\'t forget about your cart!</h2>
+            <p>We noticed you left <strong>' . esc_html($cart->product_name) . '</strong> in your cart.</p>
+            <p>Complete your purchase now before it\'s gone!</p>
+            <p><a href="' . wc_get_cart_url() . '" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Complete Purchase</a></p>
+        </body>
+        </html>';
+
         $headers = array('Content-Type: text/html; charset=UTF-8');
+        
+        // Send email and log result
         $sent = wp_mail($cart->email, $subject, $message, $headers);
+        error_log('Sending email to ' . $cart->email . ': ' . ($sent ? 'Success' : 'Failed'));
         
         if ($sent) {
-            // Update reminder status
             $wpdb->update(
                 $table_name,
                 array(
@@ -537,13 +555,7 @@ function wc_process_abandoned_cart_reminders() {
                 ),
                 array('id' => $cart->id)
             );
-            
-            // Log successful reminder
-            error_log(sprintf(
-                'Reminder email sent for cart ID %d to %s',
-                $cart->id,
-                $cart->email
-            ));
+            error_log('Updated reminder_sent status for ID: ' . $cart->id);
         }
     }
 }
