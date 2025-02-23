@@ -92,38 +92,18 @@ function wc_email_cart_display_dashboard() {
     ");
     ?>
     <!-- Enhanced Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div class="text-2xl font-bold text-blue-600"><?php echo esc_html($stats->total_emails); ?></div>
             <div class="text-gray-600">Total Emails</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div class="text-2xl font-bold text-green-600"><?php echo esc_html($stats->total_conversions); ?></div>
-            <div class="text-gray-600">Conversions</div>
-        </div>
-        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div class="text-2xl font-bold text-purple-600"><?php echo esc_html($conversion_rate); ?>%</div>
-            <div class="text-gray-600">Conversion Rate</div>
+            <div class="text-gray-600">Reminder Sent</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div class="text-2xl font-bold text-yellow-600"><?php echo esc_html($stats->today_emails); ?></div>
             <div class="text-gray-600">Today's Emails</div>
-        </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-4">Last 7 Days Activity</h3>
-            <div style="height: 300px;"> <!-- Add fixed height container -->
-                <canvas id="activityChart"></canvas>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-4">Status Distribution</h3>
-            <div style="height: 300px;"> <!-- Add fixed height container -->
-                <canvas id="statusChart"></canvas>
-            </div>
         </div>
     </div>
 
@@ -217,7 +197,6 @@ function wc_email_cart_display_dashboard() {
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -254,16 +233,6 @@ function wc_email_cart_display_dashboard() {
                                 <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                                     Reminded
                                 </span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <?php if ($entry->status !== 'purchased' && !$entry->reminder_sent): ?>
-                                <button type="button" 
-                                        class="send-reminder-btn text-blue-600 hover:text-blue-900"
-                                        data-email="<?php echo esc_attr($entry->email); ?>"
-                                        data-id="<?php echo esc_attr($entry->id); ?>">
-                                    Send Now
-                                </button>
                             <?php endif; ?>
                         </td>
                     </tr>
