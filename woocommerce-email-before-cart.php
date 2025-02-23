@@ -395,7 +395,8 @@ if (!wp_next_scheduled('wp_scheduled_delete')) {
     wp_schedule_event(time(), 'daily', 'wp_scheduled_delete');
 }
 
-// Include admin files
+// Include core files
+require_once plugin_dir_path(__FILE__) . 'includes/class-email-reminder.php';
 require_once plugin_dir_path(__FILE__) . 'admin/components.php';
 require_once plugin_dir_path(__FILE__) . 'admin/dashboard.php';
 require_once plugin_dir_path(__FILE__) . 'admin/settings.php';
@@ -426,5 +427,83 @@ function wc_track_order_status($order_id) {
 }
 add_action('woocommerce_order_status_completed', 'wc_track_order_status');
 add_action('woocommerce_order_status_processing', 'wc_track_order_status');
+
+// Add custom cron schedule
+function wc_email_cart_cron_schedules($schedules) {
+    $schedules['every_six_hours'] = array(
+        'interval' => 21600, // 6 hours in seconds
+        'display'  => 'Every 6 Hours'
+    );
+    return $schedules;
+}
+add_filter('cron_schedules', 'wc_email_cart_cron_schedules');
+
+// Register cron job on plugin activation
+register_activation_hook(__FILE__, 'wc_email_cart_activate');
+function wc_email_cart_activate() {
+    // Schedule reminder check if not already scheduled
+    if (!wp_next_scheduled('wc_email_cart_send_reminders')) {
+        wp_schedule_event(time(), 'every_six_hours', 'wc_email_cart_send_reminders');
+    }
+}
+
+// Unregister cron job on plugin deactivation
+register_deactivation_hook(__FILE__, 'wc_email_cart_deactivate');
+function wc_email_cart_deactivate() {
+    wp_clear_scheduled_hook('wc_email_cart_send_reminders');
+}
+
+// Hook the reminder sending function to the cron event
+add_action('wc_email_cart_send_reminders', 'wc_process_abandoned_cart_reminders');
+
+// Function to process and send reminders
+function wc_process_abandoned_cart_reminders() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
+    $reminder_days = get_option('wc_email_cart_reminder_days', 1);
+    
+    // Get all pending entries that need reminders
+    $pending_reminders = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $table_name 
+        WHERE status = 'pending' 
+        AND reminder_sent = 0 
+        AND created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+        $reminder_days
+    ));
+
+    if (empty($pending_reminders)) {
+        return;
+    }
+
+    foreach ($pending_reminders as $cart) {
+        // Get reminder template
+        $subject = get_option('wc_email_cart_reminder_subject', 'Complete Your Purchase');
+        $reminder = WC_Email_Cart_Reminder::get_instance();
+        
+        // Send reminder email
+        $sent = $reminder->send_reminder($cart);
+        
+        if ($sent) {
+            // Update reminder status
+            $wpdb->update(
+                $table_name,
+                array(
+                    'reminder_sent' => 1,
+                    'last_reminder_date' => current_time('mysql')
+                ),
+                array('id' => $cart->id),
+                array('%d', '%s'),
+                array('%d')
+            );
+            
+            // Log successful reminder
+            error_log(sprintf(
+                'Reminder email sent for cart ID %d to %s',
+                $cart->id,
+                $cart->email
+            ));
+        }
+    }
+}
 
 ?>
