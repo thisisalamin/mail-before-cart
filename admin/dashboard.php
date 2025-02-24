@@ -107,6 +107,17 @@ function wc_email_cart_display_dashboard() {
         </div>
     </div>
 
+    <!-- Add Clear Stats button after the statistics cards -->
+    <div class="mb-8 flex justify-end">
+        <form method="post" onsubmit="return confirm('Are you sure you want to clear all statistics and emails? This cannot be undone.');">
+            <?php wp_nonce_field('clear_stats_nonce', 'clear_stats_security'); ?>
+            <input type="hidden" name="action" value="clear_all_stats">
+            <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                Clear All Statistics
+            </button>
+        </form>
+    </div>
+
     <!-- Initialize Charts -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -175,15 +186,24 @@ function wc_email_cart_display_dashboard() {
         SELECT 
             id,
             email, 
-            product_name, 
+            product_name,
+            product_id, 
             created_at, 
             status,
             reminder_sent,
+            last_reminder_sent,
             (SELECT COUNT(*) FROM {$wpdb->prefix}wc_email_cart_tracking WHERE email = t1.email) as email_count
         FROM {$table_name} t1
         ORDER BY created_at DESC 
         LIMIT 10
     ");
+
+    if (!$recent_entries) {
+        echo '<div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 text-center text-gray-500">
+            No emails have been captured yet.
+        </div>';
+        return;
+    }
     ?>
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -197,20 +217,14 @@ function wc_email_cart_display_dashboard() {
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($recent_entries as $entry): ?>
-                    <tr class="hover:bg-gray-50" data-entry-id="<?php echo esc_attr($entry->id); ?>">
+                    <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="text-sm text-gray-900"><?php echo esc_html($entry->email); ?></div>
-                                <?php if ($entry->email_count > 1): ?>
-                                    <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                        <?php echo esc_html($entry->email_count); ?> carts
-                                    </span>
-                                <?php endif; ?>
-                            </div>
+                            <?php echo esc_html($entry->email); ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <?php echo esc_html($entry->product_name); ?>
@@ -219,21 +233,27 @@ function wc_email_cart_display_dashboard() {
                             <?php echo esc_html(human_time_diff(strtotime($entry->created_at), current_time('timestamp'))); ?> ago
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <?php
-                            $status_class = match($entry->status) {
-                                'purchased' => 'bg-green-100 text-green-800',
-                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                default => 'bg-gray-100 text-gray-800'
-                            };
+                            <?php 
+                            $status_class = 'bg-yellow-100 text-yellow-800';
+                            if ($entry->status === 'purchased') {
+                                $status_class = 'bg-green-100 text-green-800';
+                            }
                             ?>
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo esc_attr($status_class); ?>">
-                                <?php echo esc_html(ucfirst($entry->status ?: 'pending')); ?>
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $status_class; ?>">
+                                <?php echo esc_html(ucfirst($entry->status)); ?>
                             </span>
                             <?php if ($entry->reminder_sent): ?>
                                 <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                                     Reminded
                                 </span>
                             <?php endif; ?>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="send-reminder-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm"
+                                    data-id="<?php echo esc_attr($entry->id); ?>"
+                                    data-email="<?php echo esc_attr($entry->email); ?>">
+                                <?php echo $entry->reminder_sent ? 'Send Again' : 'Send Now'; ?>
+                            </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -275,13 +295,21 @@ function wc_email_cart_display_dashboard() {
                     console.log('Response:', response);
                     
                     if (response.success) {
-                        // Update button state
-                        btn.closest('td').html('<span class="text-green-600">✓ Sent</span>');
+                        // Update button text with timestamp
+                        const now = new Date();
+                        const timeAgo = 'just now';
+                        btn.html(`Send Again <span class="text-xs">(${timeAgo})</span>`);
                         
-                        // Add reminded badge
+                        // Add or update last sent timestamp
+                        const timestampDiv = btn.siblings('.text-gray-500');
+                        if (timestampDiv.length) {
+                            timestampDiv.text('Last sent: just now');
+                        } else {
+                            btn.after('<div class="text-xs text-gray-500 mt-1">Last sent: just now</div>');
+                        }
+                        
+                        // Add reminded badge if not exists
                         const statusCell = row.find('td:nth-child(4)');
-                        const currentStatus = statusCell.find('.rounded-full').first();
-                        
                         if (!statusCell.find('.bg-purple-100').length) {
                             statusCell.append(
                                 '<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Reminded</span>'
@@ -311,4 +339,36 @@ function wc_email_cart_display_dashboard() {
     });
     </script>
     <?php
+}
+
+// Add this at the start of the dashboard.php file
+add_action('admin_init', 'handle_stats_clear');
+function handle_stats_clear() {
+    if (
+        isset($_POST['action']) && 
+        $_POST['action'] === 'clear_all_stats' && 
+        check_admin_referer('clear_stats_nonce', 'clear_stats_security')
+    ) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
+        
+        // Clear the table
+        $wpdb->query("TRUNCATE TABLE $table_name");
+        
+        // Redirect with success message
+        wp_redirect(add_query_arg('cleared', 'true', admin_url('admin.php?page=wc-abandoned-emails')));
+        exit;
+    }
+}
+
+// Add success message
+add_action('admin_notices', 'show_stats_cleared_message');
+function show_stats_cleared_message() {
+    if (isset($_GET['cleared']) && $_GET['cleared'] === 'true') {
+        ?>
+        <div class="notice notice-success is-dismissible">
+            <p>All statistics and emails have been cleared successfully!</p>
+        </div>
+        <?php
+    }
 }

@@ -22,8 +22,6 @@ function wc_email_cart_settings_page() {
     if (isset($_POST['wc_email_cart_settings_nonce']) && wp_verify_nonce($_POST['wc_email_cart_settings_nonce'], 'wc_email_cart_settings')) {
         update_option('wc_email_cart_label', sanitize_text_field($_POST['wc_email_cart_label']));
         update_option('wc_email_cart_placeholder', sanitize_text_field($_POST['wc_email_cart_placeholder']));
-        update_option('wc_email_cart_reminder_value', absint($_POST['wc_email_cart_reminder_value']));
-        update_option('wc_email_cart_reminder_unit', sanitize_text_field($_POST['wc_email_cart_reminder_unit']));
         update_option('wc_email_cart_subject', sanitize_text_field($_POST['wc_email_cart_subject']));
         update_option('wc_email_cart_reminder_subject', sanitize_text_field($_POST['wc_email_cart_reminder_subject']));
         update_option('wc_email_reminder_template', wp_kses_post($_POST['reminder_template']));
@@ -39,8 +37,6 @@ function wc_email_cart_settings_page() {
     // Get current values
     $label = get_option('wc_email_cart_label', 'Enter Your Email to Add to Cart:');
     $placeholder = get_option('wc_email_cart_placeholder', 'your@email.com');
-    $reminder_value = get_option('wc_email_cart_reminder_value', 1);
-    $reminder_unit = get_option('wc_email_cart_reminder_unit', 'days');
     $email_subject = get_option('wc_email_cart_subject', 'Product Added to Cart');
     $reminder_subject = get_option('wc_email_cart_reminder_subject', 'Complete Your Purchase');
     $template = get_option('wc_email_reminder_template', wc_email_cart_get_default_template());
@@ -75,69 +71,46 @@ function wc_email_cart_settings_page() {
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
-                <!-- Reminder Settings -->
-                <h3 class="text-lg font-medium text-gray-900 pt-4">Reminder Settings</h3>
-                <div class="flex items-center gap-4">
-                    <div>
-                        <label for="wc_email_cart_reminder_value" class="block text-sm font-medium text-gray-700">
-                            Send Reminder After
-                        </label>
-                        <input type="number" 
-                               name="wc_email_cart_reminder_value" 
-                               id="wc_email_cart_reminder_value"
-                               value="<?php echo esc_attr($reminder_value); ?>"
-                               min="1"
-                               class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label for="wc_email_cart_reminder_unit" class="block text-sm font-medium text-gray-700">
-                            Time Unit
-                        </label>
-                        <select name="wc_email_cart_reminder_unit" 
-                                id="wc_email_cart_reminder_unit"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="minutes" <?php selected($reminder_unit, 'minutes'); ?>>Minutes</option>
-                            <option value="hours" <?php selected($reminder_unit, 'hours'); ?>>Hours</option>
-                            <option value="days" <?php selected($reminder_unit, 'days'); ?>>Days</option>
-                        </select>
-                    </div>
-                </div>
-
                 <!-- Email Content Settings -->
                 <h3 class="text-lg font-medium text-gray-900 pt-4">Email Content Settings</h3>
-                <div>
-                    <label for="wc_email_cart_subject" class="block text-sm font-medium text-gray-700">
-                        Initial Email Subject
-                    </label>
-                    <input type="text" 
-                           name="wc_email_cart_subject" 
-                           id="wc_email_cart_subject"
-                           value="<?php echo esc_attr($email_subject); ?>"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-
-                <div>
-                    <label for="wc_email_cart_reminder_subject" class="block text-sm font-medium text-gray-700">
-                        Reminder Email Subject
-                    </label>
-                    <input type="text" 
-                           name="wc_email_cart_reminder_subject" 
-                           id="wc_email_cart_reminder_subject"
-                           value="<?php echo esc_attr($reminder_subject); ?>"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-
-                <div>
-                    <label for="reminder_template" class="block text-sm font-medium text-gray-700">
-                        Reminder Email Template
-                    </label>
-                    <textarea name="reminder_template" 
-                              id="reminder_template"
-                              rows="10" 
-                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"><?php echo esc_textarea($template); ?></textarea>
-                    <p class="mt-2 text-sm text-gray-500">
-                        Available variables: {site_name}, {customer_name}, {cart_items}, {cart_link}, {email}
+                <div class="mt-4">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Reminder emails are automatically sent 24 hours after a product is added to cart.
                     </p>
+                    <div>
+                        <label for="wc_email_cart_subject" class="block text-sm font-medium text-gray-700">
+                            Initial Email Subject
+                        </label>
+                        <input type="text" 
+                               name="wc_email_cart_subject" 
+                               id="wc_email_cart_subject"
+                               value="<?php echo esc_attr($email_subject); ?>"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="wc_email_cart_reminder_subject" class="block text-sm font-medium text-gray-700">
+                            Reminder Email Subject
+                        </label>
+                        <input type="text" 
+                               name="wc_email_cart_reminder_subject" 
+                               id="wc_email_cart_reminder_subject"
+                               value="<?php echo esc_attr($reminder_subject); ?>"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="reminder_template" class="block text-sm font-medium text-gray-700">
+                            Reminder Email Template
+                        </label>
+                        <textarea name="reminder_template" 
+                                  id="reminder_template"
+                                  rows="10" 
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"><?php echo esc_textarea($template); ?></textarea>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Available variables: {site_name}, {customer_name}, {cart_items}, {cart_link}, {email}
+                        </p>
+                    </div>
                 </div>
             </div>
 
