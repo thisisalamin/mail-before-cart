@@ -237,7 +237,7 @@ function wc_send_email_notification($email, $product_name) {
     wp_mail($email, $subject, $message, $headers);
 }
 
-// Store the email in database and WooCommerce session, and send notification
+// Store the email in database and WooCommerce session
 function wc_store_email_in_session($cart_item_data, $product_id) {
     if (isset($_POST['customer_email']) && function_exists('WC')) {
         global $wpdb;
@@ -263,9 +263,6 @@ function wc_store_email_in_session($cart_item_data, $product_id) {
             WC()->session->init();
         }
         WC()->session->set('customer_email', $email);
-
-        // Send email notification
-        wc_send_email_notification($email, $product->get_name());
     }
     return $cart_item_data;
 }
@@ -292,10 +289,16 @@ function wc_abandoned_cart_menu() {
 }
 add_action('admin_menu', 'wc_abandoned_cart_menu', 99);
 
-// Display stored emails in the admin panel
+// Modify the wc_display_abandoned_emails function
 function wc_display_abandoned_emails() {
     if (!current_user_can('manage_options')) {
         return;
+    }
+
+    // Handle clear data action
+    if (isset($_POST['action']) && $_POST['action'] === 'wc_clear_all_data' && check_admin_referer('wc_clear_all_data_nonce')) {
+        wc_clear_all_email_data();
+        echo '<div class="notice notice-success"><p>All email tracking data has been cleared successfully!</p></div>';
     }
 
     if (!function_exists('WC')) {
@@ -307,17 +310,34 @@ function wc_display_abandoned_emails() {
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
     $results = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
 
-    echo '<div class="wrap">
-        <h1>Abandoned Cart Emails</h1>
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th>Email</th>
-                    <th>Product</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>';
+    echo '<div class="wrap">';
+    echo '<h1>Abandoned Cart Emails</h1>';
+    
+    // Add Clear Data button
+    echo '<div style="margin: 20px 0;">';
+    echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'Are you sure you want to clear all email tracking data? This action cannot be undone.\');">';
+    wp_nonce_field('wc_clear_all_data_nonce');
+    echo '<input type="hidden" name="action" value="wc_clear_all_data">';
+    echo '<input type="submit" value="Clear All Data" class="button button-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545;">';
+    echo '</form>';
+    
+    // Add Export to CSV button (existing)
+    echo '<form method="post" action="' . admin_url('admin-post.php') . '" style="display:inline; margin-left: 10px;">';
+    echo '<input type="hidden" name="action" value="wc_export_emails_to_csv">';
+    echo '<input type="submit" value="Export to CSV" class="button button-primary">';
+    echo '</form>';
+    echo '</div>';
+
+    // Rest of the table display code
+    echo '<table class="wp-list-table widefat fixed striped">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Product</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>';
     
     if ($results) {
         foreach ($results as $row) {
@@ -339,6 +359,26 @@ function wc_display_abandoned_emails() {
     </form>';
 
     echo '</div>';
+}
+
+// Add new function to clear all data
+function wc_clear_all_email_data() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
+    
+    // Truncate the table
+    $wpdb->query("TRUNCATE TABLE $table_name");
+    
+    // Clear any related sessions
+    if (function_exists('WC') && WC()->session) {
+        WC()->session->__unset('customer_email');
+    }
+    
+    // Clear any scheduled reminders
+    wp_clear_scheduled_hook('wc_email_cart_send_reminders');
+    
+    // Reschedule reminders
+    wc_email_cart_activate();
 }
 
 // Export emails to CSV
