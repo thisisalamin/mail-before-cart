@@ -355,8 +355,11 @@ function handle_stats_clear() {
         // Clear the table
         $wpdb->query("TRUNCATE TABLE $table_name");
         
-        // Redirect with success message
-        wp_redirect(add_query_arg('cleared', 'true', admin_url('admin.php?page=wc-abandoned-emails')));
+        // Set transient instead of URL parameter
+        set_transient('wc_email_cart_cleared', true, 30);
+        
+        // Redirect without the parameter
+        wp_redirect(admin_url('admin.php?page=wc-abandoned-emails'));
         exit;
     }
 }
@@ -364,7 +367,10 @@ function handle_stats_clear() {
 // Add success message
 add_action('admin_notices', 'show_stats_cleared_message');
 function show_stats_cleared_message() {
-    if (isset($_GET['cleared']) && $_GET['cleared'] === 'true') {
+    // Check for transient
+    if (get_transient('wc_email_cart_cleared')) {
+        // Delete the transient immediately
+        delete_transient('wc_email_cart_cleared');
         ?>
         <div class="notice notice-success is-dismissible">
             <p>All statistics and emails have been cleared successfully!</p>
