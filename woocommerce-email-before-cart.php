@@ -555,12 +555,19 @@ function wc_email_cart_activate() {
     error_log("Setting up cron with: Value = $reminder_value, Unit = $reminder_unit");
     
     // Calculate interval in seconds
-    $interval_seconds = match($reminder_unit) {
-        'minutes' => $reminder_value * 60,
-        'hours' => $reminder_value * 3600,
-        'days' => $reminder_value * 86400,
-        default => $reminder_value * 60
-    };
+    switch($reminder_unit) {
+        case 'minutes':
+            $interval_seconds = $reminder_value * 60;
+            break;
+        case 'hours':
+            $interval_seconds = $reminder_value * 3600;
+            break;
+        case 'days':
+            $interval_seconds = $reminder_value * 86400;
+            break;
+        default:
+            $interval_seconds = $reminder_value * 60;
+    }
     
     // Add custom interval
     add_filter('cron_schedules', function($schedules) use ($interval_seconds) {
@@ -602,12 +609,19 @@ function wc_process_abandoned_cart_reminders() {
     $reminder_unit = get_option('wc_email_cart_reminder_unit', 'minutes');
     
     // Convert time based on unit
-    $interval = match($reminder_unit) {
-        'minutes' => "INTERVAL {$reminder_value} MINUTE",
-        'hours' => "INTERVAL {$reminder_value} HOUR",
-        'days' => "INTERVAL {$reminder_value} DAY",
-        default => "INTERVAL {$reminder_value} MINUTE"
-    };
+    switch($reminder_unit) {
+        case 'minutes':
+            $interval = "INTERVAL {$reminder_value} MINUTE";
+            break;
+        case 'hours':
+            $interval = "INTERVAL {$reminder_value} HOUR";
+            break;
+        case 'days':
+            $interval = "INTERVAL {$reminder_value} DAY";
+            break;
+        default:
+            $interval = "INTERVAL {$reminder_value} MINUTE";
+    }
     
     // Get pending reminders
     $query = $wpdb->prepare("
