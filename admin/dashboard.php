@@ -90,7 +90,98 @@ function wc_email_cart_display_dashboard() {
         GROUP BY DATE(created_at)
         ORDER BY date ASC
     ");
+
+    // Pagination settings
+    $per_page = 10;
+    $current_page = max(1, isset($_GET['paged']) ? (int)$_GET['paged'] : 1);
+    $offset = ($current_page - 1) * $per_page;
+
+    // Filter settings
+    $where = array('1=1');
+    $filter_params = array();
+    
+    if (isset($_GET['status']) && !empty($_GET['status'])) {
+        $where[] = 'status = %s';
+        $filter_params[] = sanitize_text_field($_GET['status']);
+    }
+    
+    if (isset($_GET['date_from']) && !empty($_GET['date_from'])) {
+        $where[] = 'created_at >= %s';
+        $filter_params[] = sanitize_text_field($_GET['date_from'] . ' 00:00:00');
+    }
+    
+    if (isset($_GET['date_to']) && !empty($_GET['date_to'])) {
+        $where[] = 'created_at <= %s';
+        $filter_params[] = sanitize_text_field($_GET['date_to'] . ' 23:59:59');
+    }
+
+    // Construct where clause
+    $where_clause = implode(' AND ', $where);
+
+    // Get total items for pagination
+    $total_items = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name WHERE $where_clause",
+            $filter_params
+        )
+    );
+    
+    $total_pages = ceil($total_items / $per_page);
+
+    // Get filtered results
+    $recent_entries = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT 
+                id, email, product_name, product_id, created_at, status,
+                reminder_sent, last_reminder_sent,
+                (SELECT COUNT(*) FROM {$wpdb->prefix}wc_email_cart_tracking WHERE email = t1.email) as email_count
+            FROM {$table_name} t1
+            WHERE $where_clause
+            ORDER BY created_at DESC 
+            LIMIT %d OFFSET %d",
+            array_merge($filter_params, array($per_page, $offset))
+        )
+    );
+
+    // Add filter form above the table
     ?>
+    <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <input type="hidden" name="page" value="wc-abandoned-emails">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="rounded-md border-gray-300">
+                    <option value="">All</option>
+                    <option value="pending" <?php selected(isset($_GET['status']) ? $_GET['status'] : '', 'pending'); ?>>Pending</option>
+                    <option value="purchased" <?php selected(isset($_GET['status']) ? $_GET['status'] : '', 'purchased'); ?>>Purchased</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <input type="date" name="date_from" value="<?php echo isset($_GET['date_from']) ? esc_attr($_GET['date_from']) : ''; ?>" 
+                       class="rounded-md border-gray-300">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <input type="date" name="date_to" value="<?php echo isset($_GET['date_to']) ? esc_attr($_GET['date_to']) : ''; ?>" 
+                       class="rounded-md border-gray-300">
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                    Filter
+                </button>
+                <a href="<?php echo add_query_arg(array('action' => 'wc_export_filtered_emails', 'nonce' => wp_create_nonce('export_filtered_emails'))); ?>" 
+                   class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 hover:text-white">
+                    Export Filtered
+                </a>
+            </div>
+        </form>
+    </div>
+
     <!-- Enhanced Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
@@ -182,21 +273,6 @@ function wc_email_cart_display_dashboard() {
 
     <!-- Recent Entries Table with Enhanced Status -->
     <?php
-    $recent_entries = $wpdb->get_results("
-        SELECT 
-            id,
-            email, 
-            product_name,
-            product_id, 
-            created_at, 
-            status,
-            reminder_sent,
-            last_reminder_sent,
-            (SELECT COUNT(*) FROM {$wpdb->prefix}wc_email_cart_tracking WHERE email = t1.email) as email_count
-        FROM {$table_name} t1
-        ORDER BY created_at DESC 
-        LIMIT 10
-    ");
 
     if (!$recent_entries) {
         echo '<div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 text-center text-gray-500">
@@ -339,6 +415,21 @@ function wc_email_cart_display_dashboard() {
     });
     </script>
     <?php
+
+    // Add pagination
+    echo '<div class="mt-4 flex justify-between items-center">';
+    echo '<div class="text-sm text-gray-700">Showing ' . (($current_page - 1) * $per_page + 1) . ' to ' . min($current_page * $per_page, $total_items) . ' of ' . $total_items . ' entries</div>';
+    echo '<div class="flex gap-2">';
+    
+    if ($current_page > 1) {
+        echo '<a href="' . add_query_arg('paged', $current_page - 1) . '" class="px-3 py-1 border rounded hover:bg-gray-100">&laquo; Previous</a>';
+    }
+    
+    if ($current_page < $total_pages) {
+        echo '<a href="' . add_query_arg('paged', $current_page + 1) . '" class="px-3 py-1 border rounded hover:bg-gray-100">Next &raquo;</a>';
+    }
+    
+    echo '</div></div>';
 }
 
 // Add this at the start of the dashboard.php file
@@ -378,3 +469,70 @@ function show_stats_cleared_message() {
         <?php
     }
 }
+
+// Add new function to handle filtered export
+function wc_export_filtered_emails() {
+    if (!current_user_can('manage_options') || !check_admin_referer('export_filtered_emails', 'nonce')) {
+        wp_die('Unauthorized access');
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
+    
+    // Build where clause from filters
+    $where = array('1=1');
+    $params = array();
+    
+    if (isset($_GET['status']) && !empty($_GET['status'])) {
+        $where[] = 'status = %s';
+        $params[] = sanitize_text_field($_GET['status']);
+    }
+    
+    if (isset($_GET['date_from']) && !empty($_GET['date_from'])) {
+        $where[] = 'created_at >= %s';
+        $params[] = sanitize_text_field($_GET['date_from'] . ' 00:00:00');
+    }
+    
+    if (isset($_GET['date_to']) && !empty($_GET['date_to'])) {
+        $where[] = 'created_at <= %s';
+        $params[] = sanitize_text_field($_GET['date_to'] . ' 23:59:59');
+    }
+
+    $where_clause = implode(' AND ', $where);
+    
+    $results = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT * FROM $table_name WHERE $where_clause ORDER BY created_at DESC",
+            $params
+        ),
+        ARRAY_A
+    );
+
+    if ($results) {
+        $filename = 'abandoned_cart_emails_filtered_' . date('Y-m-d') . '.csv';
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment;filename=' . $filename);
+        
+        $output = fopen('php://output', 'w');
+        fputcsv($output, array('Email', 'Product ID', 'Product Name', 'Date Created', 'Status', 'Reminder Sent'));
+        
+        foreach ($results as $row) {
+            fputcsv($output, array(
+                $row['email'],
+                $row['product_id'],
+                $row['product_name'],
+                $row['created_at'],
+                $row['status'],
+                $row['reminder_sent'] ? 'Yes' : 'No'
+            ));
+        }
+        
+        fclose($output);
+        exit;
+    }
+}
+add_action('admin_init', function() {
+    if (isset($_GET['action']) && $_GET['action'] === 'wc_export_filtered_emails') {
+        wc_export_filtered_emails();
+    }
+});
