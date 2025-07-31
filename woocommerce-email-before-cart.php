@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: WooCommerce Email Before Add to Cart
  * Description: Requires customers to enter their email before adding a product to the cart and stores it for abandoned cart recovery.
@@ -15,12 +16,13 @@ if (!defined('ABSPATH')) {
 
 // Create database table on plugin activation
 register_activation_hook(__FILE__, 'wc_email_cart_create_table');
-function wc_email_cart_create_table() {
+function wc_email_cart_create_table()
+{
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
-    
+
     $charset_collate = $wpdb->get_charset_collate();
-    
+
     $sql = "CREATE TABLE IF NOT EXISTS $table_name (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         email varchar(100) NOT NULL,
@@ -31,19 +33,21 @@ function wc_email_cart_create_table() {
         status varchar(50) DEFAULT 'pending',
         PRIMARY KEY  (id)
     ) $charset_collate;";
-    
+
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
 }
 
 // Enqueue Tailwind CSS for frontend
-function wc_enqueue_tailwind_css() {
+function wc_enqueue_tailwind_css()
+{
     wp_enqueue_style('tailwind-css', 'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 }
 add_action('wp_enqueue_scripts', 'wc_enqueue_tailwind_css');
 
 // Enqueue Tailwind CSS for admin
-function wc_enqueue_admin_tailwind_css($hook) {
+function wc_enqueue_admin_tailwind_css($hook)
+{
     if ('woocommerce_page_wc-abandoned-emails' !== $hook) {
         return;
     }
@@ -52,7 +56,8 @@ function wc_enqueue_admin_tailwind_css($hook) {
 add_action('admin_enqueue_scripts', 'wc_enqueue_admin_tailwind_css');
 
 // Add Settings Page
-function wc_email_cart_settings_init() {
+function wc_email_cart_settings_init()
+{
     add_settings_section(
         'wc_email_cart_settings',
         'Email Cart Settings',
@@ -83,65 +88,73 @@ function wc_email_cart_settings_init() {
 add_action('admin_init', 'wc_email_cart_settings_init');
 
 // Settings callbacks
-function wc_email_cart_label_cb() {
+function wc_email_cart_label_cb()
+{
     $label = get_option('wc_email_cart_label', 'Enter Your Email to Add to Cart:');
     echo "<input type='text' class='regular-text' name='wc_email_cart_label' value='" . esc_attr($label) . "'>";
 }
 
-function wc_email_cart_placeholder_cb() {
+function wc_email_cart_placeholder_cb()
+{
     $placeholder = get_option('wc_email_cart_placeholder', 'your@email.com');
     echo "<input type='text' class='regular-text' name='wc_email_cart_placeholder' value='" . esc_attr($placeholder) . "'>";
 }
 
-function wc_email_cart_reminder_days_cb() {
+function wc_email_cart_reminder_days_cb()
+{
     $days = get_option('wc_email_cart_reminder_days', 1);
     echo "<input type='number' class='small-text' name='wc_email_cart_reminder_days' value='" . esc_attr($days) . "'>";
 }
 
-function wc_email_cart_reminder_value_cb() {
+function wc_email_cart_reminder_value_cb()
+{
     $value = get_option('wc_email_cart_reminder_value', 1);
     echo "<input type='number' min='1' class='small-text' name='wc_email_cart_reminder_value' value='" . esc_attr($value) . "'>";
 }
 
-function wc_email_cart_reminder_unit_cb() {
+function wc_email_cart_reminder_unit_cb()
+{
     $unit = get_option('wc_email_cart_reminder_unit', 'minutes');
-    ?>
+?>
     <select name="wc_email_cart_reminder_unit">
         <option value="minutes" <?php selected($unit, 'minutes'); ?>>Minutes</option>
         <option value="hours" <?php selected($unit, 'hours'); ?>>Hours</option>
         <option value="days" <?php selected($unit, 'days'); ?>>Days</option>
     </select>
-    <?php
+<?php
 }
 
 // Email validation to ensure it's not already in the database
 // Modified email input field display function
-function wc_email_before_add_to_cart() {
+function wc_email_before_add_to_cart()
+{
     global $product;
 
     // Don't show email field if:
     // 1. Product is out of stock
     // 2. Product is not purchasable
     // 3. Product type doesn't support add to cart
-    if (!$product || 
-        !$product->is_purchasable() || 
-        !$product->is_in_stock() || 
-        $product->is_type('external') || 
-        ($product->is_type('variable') && !$product->has_child())) {
+    if (
+        !$product ||
+        !$product->is_purchasable() ||
+        !$product->is_in_stock() ||
+        $product->is_type('external') ||
+        ($product->is_type('variable') && !$product->has_child())
+    ) {
         return;
     }
 
     $label = get_option('wc_email_cart_label', 'Enter Your Email to Add to Cart:');
     $placeholder = get_option('wc_email_cart_placeholder', 'your@email.com');
-    ?>
+?>
     <p class="email-before-add-to-cart">
         <label for="customer_email" class="text-gray-700 font-medium"><?php echo esc_html($label); ?></label>
-        <input type="email" 
-               id="customer_email" 
-               name="customer_email" 
-               required 
-               placeholder="<?php echo esc_attr($placeholder); ?>"
-               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <input type="email"
+            id="customer_email"
+            name="customer_email"
+            required
+            placeholder="<?php echo esc_attr($placeholder); ?>"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
     </p>
     <script type="text/javascript">
         jQuery(document).ready(function($) {
@@ -178,7 +191,8 @@ function wc_email_before_add_to_cart() {
 add_action('woocommerce_before_add_to_cart_button', 'wc_email_before_add_to_cart');
 
 // AJAX handler to check if email exists
-function wc_check_email_exists() {
+function wc_check_email_exists()
+{
     global $wpdb;
     $email = sanitize_email($_POST['email']);
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
@@ -189,12 +203,14 @@ add_action('wp_ajax_wc_check_email_exists', 'wc_check_email_exists');
 add_action('wp_ajax_nopriv_wc_check_email_exists', 'wc_check_email_exists');
 
 // Store the email in database and WooCommerce session
-function wc_store_email_in_session($cart_item_data, $product_id) {
+function wc_store_email_in_session($cart_item_data, $product_id)
+{
     if (isset($_POST['customer_email']) && function_exists('WC')) {
         global $wpdb;
         $email = sanitize_email($_POST['customer_email']);
         $product = wc_get_product($product_id);
-        
+
+        // Save to custom table
         $wpdb->insert(
             $wpdb->prefix . 'wc_email_cart_tracking',
             array(
@@ -207,15 +223,33 @@ function wc_store_email_in_session($cart_item_data, $product_id) {
             array('%s', '%d', '%s', '%s', '%s')
         );
 
-        // Remove this line - we don't want to send initial notification
-        // wc_email_reminder()->send_initial_notification($email, $product->get_name());
+        // Set WooCommerce session and CartFlows cookie
+        WC()->session->set('wcf-customer-email', $email);
+        WC()->session->set('ab_cart_user_email', $email);
+        WC()->session->set('cart_user_id', 'guest_' . md5($email));
+        WC()->session->set('customer_email', $email); // Ensure compatibility with other plugins
+
+        setcookie('wcf_ac_email_set', $email, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+        $_COOKIE['wcf_ac_email_set'] = $email;
+
+        // Debugging: log when email is set
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Abandoned cart email set: ' . $email);
+        }
+
+        // Trigger CartFlows hook
+        do_action('wcf_ac_save_abandoned_cart', $email);
     }
+
     return $cart_item_data;
 }
+
+
 add_filter('woocommerce_add_cart_item_data', 'wc_store_email_in_session', 10, 2);
 
 // Retrieve stored email for abandoned cart tracking
-function wc_get_abandoned_cart_email() {
+function wc_get_abandoned_cart_email()
+{
     if (!function_exists('WC') || !WC()->session) {
         return false;
     }
@@ -223,7 +257,8 @@ function wc_get_abandoned_cart_email() {
 }
 
 // Add Admin Menu for viewing abandoned emails
-function wc_abandoned_cart_menu() {
+function wc_abandoned_cart_menu()
+{
     add_submenu_page(
         'woocommerce',
         'Email Cart',
@@ -236,7 +271,8 @@ function wc_abandoned_cart_menu() {
 add_action('admin_menu', 'wc_abandoned_cart_menu', 99);
 
 // Modify the wc_display_abandoned_emails function
-function wc_display_abandoned_emails() {
+function wc_display_abandoned_emails()
+{
     if (!current_user_can('manage_options')) {
         return;
     }
@@ -258,7 +294,7 @@ function wc_display_abandoned_emails() {
 
     echo '<div class="wrap">';
     echo '<h1>Abandoned Cart Emails</h1>';
-    
+
     // Add Clear Data button
     echo '<div style="margin: 20px 0;">';
     echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'Are you sure you want to clear all email tracking data? This action cannot be undone.\');">';
@@ -266,7 +302,7 @@ function wc_display_abandoned_emails() {
     echo '<input type="hidden" name="action" value="wc_clear_all_data">';
     echo '<input type="submit" value="Clear All Data" class="button button-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545;">';
     echo '</form>';
-    
+
     // Add Export to CSV button (existing)
     echo '<form method="post" action="' . admin_url('admin-post.php') . '" style="display:inline; margin-left: 10px;">';
     echo '<input type="hidden" name="action" value="wc_export_emails_to_csv">';
@@ -284,7 +320,7 @@ function wc_display_abandoned_emails() {
             </tr>
         </thead>
         <tbody>';
-    
+
     if ($results) {
         foreach ($results as $row) {
             echo '<tr>
@@ -296,7 +332,7 @@ function wc_display_abandoned_emails() {
     } else {
         echo '<tr><td colspan="3">No abandoned emails recorded yet.</td></tr>';
     }
-    
+
     echo '</tbody></table>';
 
     echo '<form method="post" action="' . admin_url('admin-post.php') . '">
@@ -308,27 +344,29 @@ function wc_display_abandoned_emails() {
 }
 
 // Add new function to clear all data
-function wc_clear_all_email_data() {
+function wc_clear_all_email_data()
+{
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
-    
+
     // Truncate the table
     $wpdb->query("TRUNCATE TABLE $table_name");
-    
+
     // Clear any related sessions
     if (function_exists('WC') && WC()->session) {
         WC()->session->__unset('customer_email');
     }
-    
+
     // Clear any scheduled reminders
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
-    
+
     // Reschedule reminders
     wc_email_cart_activate();
 }
 
 // Export emails to CSV
-function wc_export_emails_to_csv() {
+function wc_export_emails_to_csv()
+{
     if (!current_user_can('manage_options')) {
         return;
     }
@@ -356,10 +394,11 @@ function wc_export_emails_to_csv() {
 add_action('admin_post_wc_export_emails_to_csv', 'wc_export_emails_to_csv');
 
 // Update database table to include reminder_sent column
-function wc_email_cart_update_db() {
+function wc_email_cart_update_db()
+{
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
-    
+
     // Check for reminder_sent column
     $reminder_column = $wpdb->get_results($wpdb->prepare(
         "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'reminder_sent'",
@@ -397,7 +436,8 @@ function wc_email_cart_update_db() {
 register_activation_hook(__FILE__, 'wc_email_cart_update_db');
 
 // Schedule Cron Job to clear old session data
-function wc_clear_abandoned_cart_emails() {
+function wc_clear_abandoned_cart_emails()
+{
     if (function_exists('WC') && WC()->session) {
         WC()->session->__unset('customer_email');
     }
@@ -416,7 +456,8 @@ require_once plugin_dir_path(__FILE__) . 'admin/dashboard.php';
 require_once plugin_dir_path(__FILE__) . 'admin/settings.php';
 
 // Enqueue admin scripts
-function wc_email_cart_admin_scripts($hook) {
+function wc_email_cart_admin_scripts($hook)
+{
     if ('woocommerce_page_wc-abandoned-emails' !== $hook) {
         return;
     }
@@ -425,13 +466,14 @@ function wc_email_cart_admin_scripts($hook) {
 add_action('admin_enqueue_scripts', 'wc_email_cart_admin_scripts');
 
 // Add these new functions for order status tracking
-function wc_track_order_status($order_id) {
+function wc_track_order_status($order_id)
+{
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
-    
+
     $order = wc_get_order($order_id);
     $email = $order->get_billing_email();
-    
+
     // Update all entries for this email
     $wpdb->update(
         $table_name,
@@ -444,7 +486,8 @@ add_action('woocommerce_order_status_processing', 'wc_track_order_status');
 
 // Unregister cron job on plugin deactivation
 register_deactivation_hook(__FILE__, 'wc_email_cart_deactivate');
-function wc_email_cart_deactivate() {
+function wc_email_cart_deactivate()
+{
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
 }
 
@@ -452,12 +495,13 @@ function wc_email_cart_deactivate() {
 add_action('wc_email_cart_send_reminders', 'wc_process_abandoned_cart_reminders');
 
 // Add this new function to help with debugging
-function wc_email_cart_debug_cron() {
+function wc_email_cart_debug_cron()
+{
     if (!current_user_can('manage_options')) return;
-    
+
     $next_scheduled = wp_next_scheduled('wc_email_cart_send_reminders');
     error_log('Next scheduled reminder check: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'Not scheduled'));
-    
+
     // Force process reminders if debug parameter is present
     if (isset($_GET['process_reminders'])) {
         wc_process_abandoned_cart_reminders();
@@ -467,15 +511,16 @@ function wc_email_cart_debug_cron() {
 add_action('init', 'wc_email_cart_debug_cron');
 
 // Add this new function to force reschedule
-function wc_force_reschedule_reminders() {
+function wc_force_reschedule_reminders()
+{
     if (!current_user_can('manage_options')) return;
-    
+
     if (isset($_GET['reschedule_reminders'])) {
         wp_clear_scheduled_hook('wc_email_cart_send_reminders');
-        
+
         $timestamp = time();
         wp_schedule_event($timestamp, 'reminder_interval', 'wc_email_cart_send_reminders');
-        
+
         wp_redirect(admin_url('admin.php?page=wc-abandoned-emails&rescheduled=1'));
         exit;
     }
@@ -483,46 +528,49 @@ function wc_force_reschedule_reminders() {
 add_action('admin_init', 'wc_force_reschedule_reminders');
 
 // Add admin notice for reschedule success
-function wc_reminder_admin_notices() {
+function wc_reminder_admin_notices()
+{
     if (isset($_GET['rescheduled'])) {
-        ?>
+    ?>
         <div class="notice notice-success is-dismissible">
             <p>Reminder schedule has been reset. Next reminder will run in 1 minute.</p>
         </div>
-        <?php
+<?php
     }
 }
 add_action('admin_notices', 'wc_reminder_admin_notices');
 
 // Add a function to manually reset the schedule
-function wc_reset_reminder_schedule() {
+function wc_reset_reminder_schedule()
+{
     // Clear existing schedule
     wp_clear_scheduled_hook('wc_email_cart_send_reminders');
-    
+
     // Set next run time to next minute
     $next_minute = strtotime(date('Y-m-d H:i:00', time() + 60));
-    
+
     // Schedule new event
     wp_schedule_event($next_minute, 'five_minutes', 'wc_email_cart_send_reminders');
-    
+
     return true;
 }
 
 // Add this near other add_action calls
 add_action('wp_ajax_wc_send_manual_reminder', 'wc_send_manual_reminder');
 
-function wc_send_manual_reminder() {
+function wc_send_manual_reminder()
+{
     check_ajax_referer('wc_email_cart_nonce');
-    
+
     if (!current_user_can('manage_woocommerce')) {
         wp_send_json_error('Permission denied');
     }
 
     $id = intval($_POST['id']);
-    
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'wc_email_cart_tracking';
-    
+
     $cart = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d",
         $id
@@ -533,7 +581,7 @@ function wc_send_manual_reminder() {
     }
 
     $sent = wc_email_reminder()->send_reminder_email($cart);
-    
+
     if ($sent) {
         // Update reminder_sent even if it was already sent (for tracking multiple sends)
         $wpdb->update(
