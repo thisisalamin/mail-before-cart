@@ -35,7 +35,7 @@ The plugin works automatically after activation:
 
 ## Database
 
-The plugin creates a custom table `{prefix}_wc_email_cart_tracking` with the following structure:
+The plugin creates a custom table `{prefix}_mbcart_tracking` with the following structure:
 - id (AUTO_INCREMENT)
 - email (varchar)
 - product_id (bigint)
