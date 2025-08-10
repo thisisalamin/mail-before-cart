@@ -195,31 +195,31 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			}
 			echo '</tbody></table></div>';
 				echo <<<'JS'
-<script>
-jQuery(function($){
-    $(document).on("click",".send-reminder-btn",function(){
-        const b=$(this),id=b.data("id"),email=b.data("email");
-        if(!confirm("Send reminder to "+email+"?")) return;
-        b.prop("disabled",true).text(wcEmailCart.sending);
-        $.post(wcEmailCart.ajaxurl,{action:"wc_send_manual_reminder",_ajax_nonce:wcEmailCart.nonce,id:id},function(r){
-            if(r.success){
-                b.html("Send Again <span class=\"text-xs\">(just now)</span>");
-                if(!b.closest("tr").find(".bg-purple-100").length){
-                    b.closest("tr").find("td:nth-child(4)").append("<span class=\"ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800\">Reminded</span>");
-                }
-            } else {
-                alert(r.data||wcEmailCart.error);
-                b.prop("disabled",false).text("Send Now");
-            }
-        }).fail(function(){
-            alert(wcEmailCart.error);
-            b.prop("disabled",false).text("Send Now");
-        });
-    });
-});
-</script>
-JS;
-		}
+					<script>
+					jQuery(function($){
+						$(document).on("click",".send-reminder-btn",function(){
+							const b=$(this),id=b.data("id"),email=b.data("email");
+							if(!confirm("Send reminder to "+email+"?")) return;
+							b.prop("disabled",true).text(wcEmailCart.sending);
+							$.post(wcEmailCart.ajaxurl,{action:"wc_send_manual_reminder",_ajax_nonce:wcEmailCart.nonce,id:id},function(r){
+								if(r.success){
+									b.html("Send Again <span class=\"text-xs\">(just now)</span>");
+									if(!b.closest("tr").find(".bg-purple-100").length){
+										b.closest("tr").find("td:nth-child(4)").append("<span class=\"ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800\">Reminded</span>");
+									}
+								} else {
+									alert(r.data||wcEmailCart.error);
+									b.prop("disabled",false).text("Send Now");
+								}
+							}).fail(function(){
+								alert(wcEmailCart.error);
+								b.prop("disabled",false).text("Send Now");
+							});
+						});
+					});
+					</script>
+					JS;
+				}
 		private function pagination( $current, $per_page, $total, $pages ) {
 			if ( $pages <= 1 ) {
 				return; }
