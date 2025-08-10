@@ -1,0 +1,98 @@
+/* Mail Before Cart Custom Styles (replaces Tailwind utilities) */
+:root {
+  --mbc-primary:#2563eb;
+  --mbc-primary-hover:#1d4ed8;
+  --mbc-success:#16a34a;
+  --mbc-success-hover:#15803d;
+  --mbc-danger:#dc2626;
+  --mbc-danger-hover:#b91c1c;
+  --mbc-warning:#eab308;
+  --mbc-purple:#9333ea;
+  --mbc-border:#d1d5db;
+  --mbc-bg:#f8fafc;
+  --mbc-text:#374151;
+  --mbc-muted:#6b7280;
+  --mbc-radius:6px;
+  --mbc-radius-sm:4px;
+  --mbc-shadow:0 1px 2px rgba(0,0,0,.05),0 1px 3px rgba(0,0,0,.1);
+  --mbc-transition:.16s ease-in-out;
+  --mbc-spacing:1rem;
+  --mbc-font-stack:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+.mbc-wrap {background:var(--mbc-bg);padding:24px;min-height:100vh;font-family:var(--mbc-font-stack);}
+.mbc-container {max-width:1200px;margin:0 auto;}
+.mbc-page-title {font-size:30px;margin:0 0 24px;font-weight:600;}
+/* Tabs */
+.mbc-tabs-nav {display:flex;gap:32px;border-bottom:1px solid var(--mbc-border);margin:0 0 24px;}
+.mbc-tab,.mbc-tab-active {position:relative;display:inline-block;padding:14px 4px;font-size:14px;font-weight:500;color:var(--mbc-muted);text-decoration:none;transition:var(--mbc-transition);}
+.mbc-tab:hover {color:var(--mbc-text);}
+.mbc-tab-active {color:var(--mbc-primary);}
+.mbc-tab-active::after,.mbc-tab:hover::after {content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:currentColor;}
+/* Filters */
+.mbc-filters-form {display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;background:#fff;border:1px solid var(--mbc-border);padding:16px;border-radius:var(--mbc-radius);box-shadow:var(--mbc-shadow);margin:0 0 24px;}
+.mbc-filter {display:flex;flex-direction:column;gap:4px;}
+.mbc-label {font-size:13px;font-weight:500;color:var(--mbc-text);}
+.mbc-input,.mbc-select,.mbc-textarea {width:100%;padding:8px 10px;font-size:14px;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius-sm);background:#fff;transition:var(--mbc-transition);font-family:inherit;}
+.mbc-input:focus,.mbc-select:focus,.mbc-textarea:focus {outline:none;border-color:var(--mbc-primary);box-shadow:0 0 0 2px rgba(37,99,235,.15);}
+.mbc-textarea {min-height:140px;resize:vertical;}
+.mbc-help {font-size:11px;color:var(--mbc-muted);margin-top:4px;}
+.mbc-filter-btns {display:flex;gap:8px;align-items:center;}
+/* Buttons */
+.mbc-btn {display:inline-block;font-size:14px;line-height:1.2;font-weight:500;border:1px solid transparent;border-radius:var(--mbc-radius-sm);padding:8px 14px;cursor:pointer;text-decoration:none;background:var(--mbc-border);color:#111;transition:var(--mbc-transition);}
+.mbc-btn:hover {filter:brightness(.95);}
+.mbc-btn-primary {background:var(--mbc-primary);color:#fff;border-color:var(--mbc-primary);}
+.mbc-btn-primary:hover {background:var(--mbc-primary-hover);}
+.mbc-btn-success {background:var(--mbc-success);color:#fff;border-color:var(--mbc-success);}
+.mbc-btn-success:hover {background:var(--mbc-success-hover);}
+.mbc-btn-danger {background:var(--mbc-danger);color:#fff;border-color:var(--mbc-danger);}
+.mbc-btn-danger:hover {background:var(--mbc-danger-hover);}
+.mbc-btn-small {padding:5px 10px;font-size:12px;}
+/* Stats */
+.mbc-stats-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;margin:0 0 24px;}
+.mbc-stat-card {background:#fff;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius);padding:20px;box-shadow:var(--mbc-shadow);}
+.mbc-stat-value {font-size:26px;font-weight:600;margin:0 0 6px;color:var(--mbc-primary);}
+.mbc-stat-label {font-size:13px;color:var(--mbc-muted);}
+/* Dynamic color overrides from earlier logic */
+.text-blue-600 {color:var(--mbc-primary);} /* preserved color hooks */
+.text-green-600 {color:var(--mbc-success);}
+.text-yellow-600 {color:var(--mbc-warning);}
+/* Clear form */
+.mbc-clear-form {text-align:right;margin:0 0 24px;}
+/* Charts */
+.mbc-charts {display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;margin:0 0 32px;}
+/* Table */
+.mbc-table-wrap {background:#fff;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius);overflow:hidden;box-shadow:var(--mbc-shadow);}
+.mbc-table {width:100%;border-collapse:collapse;font-size:13px;}
+.mbc-table thead {background:#f1f5f9;}
+.mbc-th {text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--mbc-muted);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--mbc-border);}
+.mbc-td {padding:10px 16px;border-bottom:1px solid var(--mbc-border);vertical-align:middle;}
+.mbc-row:hover {background:#f8fafc;}
+.mbc-empty {background:#fff;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius);padding:32px;text-align:center;color:var(--mbc-muted);font-size:14px;}
+/* Status pills */
+.mbc-status {display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;line-height:1;padding:6px 10px;border-radius:999px;}
+.mbc-status-pending {background:#fef9c3;color:#a16207;}
+.mbc-status-purchased {background:#dcfce7;color:#15803d;}
+.mbc-status-reminded {background:#f3e8ff;color:#6b21a8;margin-left:6px;}
+/* Pagination */
+.mbc-pagination {display:flex;justify-content:space-between;align-items:center;margin:16px 0 0;font-size:13px;}
+.mbc-pagination-info {color:var(--mbc-muted);}
+.mbc-pagination-links {display:flex;gap:8px;}
+.mbc-page-link {padding:6px 12px;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius-sm);text-decoration:none;color:var(--mbc-text);transition:var(--mbc-transition);}
+.mbc-page-link:hover {background:#f1f5f9;}
+/* Sections / Settings */
+.mbc-settings-form {background:#fff;border:1px solid var(--mbc-border);padding:24px;border-radius:var(--mbc-radius);display:flex;flex-direction:column;gap:28px;box-shadow:var(--mbc-shadow);}
+.mbc-section-title {font-size:16px;font-weight:600;margin:0 0 8px;color:var(--mbc-text);}
+.mbc-field {margin:0 0 16px;}
+.mbc-field:last-child {margin-bottom:0;}
+/* Frontend field */
+.email-before-add-to-cart {margin:0 0 16px;}
+.email-before-add-to-cart .mbc-field-label {display:block;font-size:14px;font-weight:500;margin:0 0 4px;color:var(--mbc-text);}
+.email-before-add-to-cart .mbc-input {max-width:400px;}
+/* Generic focus style for links */
+.mbc-btn:focus,.mbc-page-link:focus,.mbc-tab:focus,.mbc-tab-active:focus {outline:2px solid var(--mbc-primary);outline-offset:2px;}
+/* Responsive adjustments */
+@media (max-width:640px){
+  .mbc-tabs-nav {gap:12px;flex-wrap:wrap;}
+  .mbc-filters-form {flex-direction:column;align-items:stretch;}
+  .mbc-pagination {flex-direction:column;gap:12px;align-items:flex-start;}
+}

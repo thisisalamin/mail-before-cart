@@ -39,16 +39,16 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'dashboard'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			wp_enqueue_script( 'chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true );
 			wp_enqueue_script( 'jquery' );
-			echo '<div class="wrap bg-gray-50 min-h-screen p-6"><div class="max-w-7xl mx-auto">';
-			echo '<h1 class="text-3xl font-bold mb-6">' . esc_html__( 'Mail Before Cart', 'mail-before-cart' ) . '</h1>';
-			echo '<nav class="border-b border-gray-200 mb-6 -mb-px flex space-x-8">';
+			echo '<div class="wrap mbc-wrap"><div class="mbc-container">';
+			echo '<h1 class="mbc-page-title">' . esc_html__( 'Mail Before Cart', 'mail-before-cart' ) . '</h1>';
+			echo '<nav class="mbc-tabs-nav">';
 			$tabs = array(
 				'dashboard' => __( 'Dashboard', 'mail-before-cart' ),
 				'settings'  => __( 'Settings', 'mail-before-cart' ),
 			);
 			foreach ( $tabs as $slug => $label ) {
-				$cls = $active_tab === $slug ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-				echo '<a href="?page=wc-abandoned-emails&tab=' . esc_attr( $slug ) . '" class="' . esc_attr( $cls ) . ' whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">' . esc_html( $label ) . '</a>';
+				$cls = $active_tab === $slug ? 'mbc-tab-active' : 'mbc-tab';
+				echo '<a href="?page=wc-abandoned-emails&tab=' . esc_attr( $slug ) . '" class="' . esc_attr( $cls ) . '">' . esc_html( $label ) . '</a>';
 			}
 			echo '</nav>';
 			if ( 'settings' === $active_tab ) {
@@ -129,12 +129,12 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			$this->pagination( $current, $per_page, $total, $pages );
 		}
 		private function dashboard_filters() {
-			echo '<form method="get" class="mb-6 bg-white p-4 rounded-lg shadow border flex flex-wrap gap-4 items-end">';
+			echo '<form method="get" class="mbc-filters-form">';
 			echo '<input type="hidden" name="page" value="wc-abandoned-emails" />';
 			$status = isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$from   = isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '';
 			$to     = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '';
-			echo '<div><label class="block text-sm mb-1">' . esc_html__( 'Status', 'mail-before-cart' ) . '</label><select name="status" class="rounded border-gray-300">';
+			echo '<div class="mbc-filter"><label class="mbc-label">' . esc_html__( 'Status', 'mail-before-cart' ) . '</label><select name="status" class="mbc-select">';
 			echo '<option value="">' . esc_html__( 'All', 'mail-before-cart' ) . '</option>';
 			foreach ( array(
 				'pending'   => __( 'Pending', 'mail-before-cart' ),
@@ -142,10 +142,10 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			) as $val => $label ) {
 				printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $val ), selected( $status, $val, false ), esc_html( $label ) ); }
 			echo '</select></div>';
-			echo '<div><label class="block text-sm mb-1">' . esc_html__( 'From', 'mail-before-cart' ) . '</label><input type="date" name="date_from" value="' . esc_attr( $from ) . '" class="rounded border-gray-300" /></div>';
-			echo '<div><label class="block text-sm mb-1">' . esc_html__( 'To', 'mail-before-cart' ) . '</label><input type="date" name="date_to" value="' . esc_attr( $to ) . '" class="rounded border-gray-300" /></div>';
-			echo '<div class="flex gap-2"><button class="bg-blue-600 text-white px-4 py-2 rounded" type="submit">' . esc_html__( 'Filter', 'mail-before-cart' ) . '</button>';
-			echo '<a class="bg-green-600 text-white px-4 py-2 rounded" href="' . esc_url(
+			echo '<div class="mbc-filter"><label class="mbc-label">' . esc_html__( 'From', 'mail-before-cart' ) . '</label><input type="date" name="date_from" value="' . esc_attr( $from ) . '" class="mbc-input" /></div>';
+			echo '<div class="mbc-filter"><label class="mbc-label">' . esc_html__( 'To', 'mail-before-cart' ) . '</label><input type="date" name="date_to" value="' . esc_attr( $to ) . '" class="mbc-input" /></div>';
+			echo '<div class="mbc-filter-btns"><button class="mbc-btn mbc-btn-primary" type="submit">' . esc_html__( 'Filter', 'mail-before-cart' ) . '</button>';
+			echo '<a class="mbc-btn mbc-btn-success" href="' . esc_url(
 				add_query_arg(
 					array(
 						'action' => 'wc_export_filtered_emails',
@@ -156,7 +156,7 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			echo '</form>';
 		}
 		private function stat_cards( $s ) {
-			echo '<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">';
+			echo '<div class="mbc-stats-grid">';
 			$cards = array(
 				array(
 					'value' => (int) $s->total_emails,
@@ -175,34 +175,34 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 				),
 			);
 			foreach ( $cards as $c ) {
-				echo '<div class="bg-white rounded shadow p-6 border"><div class="text-2xl font-bold ' . esc_attr( $c['color'] ) . '">' . esc_html( $c['value'] ) . '</div><div class="text-gray-600">' . esc_html( $c['label'] ) . '</div></div>'; }
+				echo '<div class="mbc-stat-card"><div class="mbc-stat-value ' . esc_attr( $c['color'] ) . '">' . esc_html( $c['value'] ) . '</div><div class="mbc-stat-label">' . esc_html( $c['label'] ) . '</div></div>'; }
 			echo '</div>';
-			echo '<form method="post" onsubmit="return confirm(\'' . esc_js( __( 'Clear all statistics and emails?', 'mail-before-cart' ) ) . '\')" class="mb-6 text-right">';
+			echo '<form method="post" onsubmit="return confirm(\'' . esc_js( __( 'Clear all statistics and emails?', 'mail-before-cart' ) ) . '\')" class="mbc-clear-form">';
 			wp_nonce_field( 'clear_stats_nonce', 'clear_stats_security' );
 			echo '<input type="hidden" name="action" value="clear_all_stats" />';
-			echo '<button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" type="submit">' . esc_html__( 'Clear All Statistics', 'mail-before-cart' ) . '</button></form>';
+			echo '<button class="mbc-btn mbc-btn-danger" type="submit">' . esc_html__( 'Clear All Statistics', 'mail-before-cart' ) . '</button></form>';
 		}
 		private function charts( $stats, $daily ) {
-			echo '<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><canvas id="activityChart" height="140"></canvas><canvas id="statusChart" height="140"></canvas></div>';
+			echo '<div class="mbc-charts"><canvas id="activityChart" height="140"></canvas><canvas id="statusChart" height="140"></canvas></div>';
 			echo '<script>(function(){const dL=' . wp_json_encode( wp_list_pluck( $daily, 'date' ) ) . ',dT=' . wp_json_encode( wp_list_pluck( $daily, 'total' ) ) . ',dC=' . wp_json_encode( wp_list_pluck( $daily, 'conversions' ) ) . ';window.addEventListener("load",function(){if(window.Chart){new Chart(document.getElementById("activityChart"),{type:"line",data:{labels:dL,datasets:[{label:"' . esc_js( __( 'Emails Captured', 'mail-before-cart' ) ) . '",data:dT,borderColor:"#3b82f6",tension:.1},{label:"' . esc_js( __( 'Conversions', 'mail-before-cart' ) ) . '",data:dC,borderColor:"#22c55e",tension:.1}]}});new Chart(document.getElementById("statusChart"),{type:"doughnut",data:{labels:[' . wp_json_encode( array( __( 'Pending', 'mail-before-cart' ), __( 'Purchased', 'mail-before-cart' ), __( 'Reminded', 'mail-before-cart' ) ) ) . '],datasets:[{data:[' . ( (int) $stats->total_emails - (int) $stats->total_conversions ) . ',' . (int) $stats->total_conversions . ',' . (int) $stats->total_reminders . '],backgroundColor:["#eab308","#22c55e","#9333ea"]}]}});}})();</script>';
 		}
 		private function entries_table( $entries ) {
 			if ( ! $entries ) {
-				echo '<div class="bg-white border rounded p-6 text-center text-gray-500">' . esc_html__( 'No emails captured yet.', 'mail-before-cart' ) . '</div>';
+				echo '<div class="mbc-empty">' . esc_html__( 'No emails captured yet.', 'mail-before-cart' ) . '</div>';
 				return; }
-			echo '<div class="bg-white border rounded shadow overflow-hidden"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
+			echo '<div class="mbc-table-wrap"><table class="mbc-table"><thead><tr>';
 			foreach ( array( 'Email', 'Product', 'Date', 'Status', 'Actions' ) as $h ) {
-				echo '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">' . esc_html( $h ) . '</th>'; }
-			echo '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+				echo '<th class="mbc-th">' . esc_html( $h ) . '</th>'; }
+			echo '</tr></thead><tbody>';
 			foreach ( $entries as $e ) {
-				$status_class = 'bg-yellow-100 text-yellow-800';
+				$status_class = 'mbc-status-pending';
 				if ( 'purchased' === $e->status ) {
-					$status_class = 'bg-green-100 text-green-800'; }
-				echo '<tr class="hover:bg-gray-50"><td class="px-6 py-4 whitespace-nowrap">' . esc_html( $e->email ) . '</td>';
-				echo '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' . esc_html( $e->product_name ) . '</td>';
-				echo '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' . esc_html( human_time_diff( strtotime( $e->created_at ), current_time( 'timestamp' ) ) ) . ' ' . esc_html__( 'ago', 'mail-before-cart' ) . '</td>';
-				echo '<td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' . esc_attr( $status_class ) . '">' . esc_html( ucfirst( $e->status ) ) . '</span>' . ( $e->reminder_sent ? '<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">' . esc_html__( 'Reminded', 'mail-before-cart' ) . '</span>' : '' ) . '</td>';
-				echo '<td class="px-6 py-4 whitespace-nowrap"><button class="send-reminder-btn bg-blue-600 hover:bg-blue-700 text-white text-sm rounded px-3 py-1" data-id="' . esc_attr( $e->id ) . '" data-email="' . esc_attr( $e->email ) . '">' . ( $e->reminder_sent ? esc_html__( 'Send Again', 'mail-before-cart' ) : esc_html__( 'Send Now', 'mail-before-cart' ) ) . '</button></td></tr>';
+					$status_class = 'mbc-status-purchased'; }
+				echo '<tr class="mbc-row"><td class="mbc-td">' . esc_html( $e->email ) . '</td>';
+				echo '<td class="mbc-td">' . esc_html( $e->product_name ) . '</td>';
+				echo '<td class="mbc-td">' . esc_html( human_time_diff( strtotime( $e->created_at ), current_time( 'timestamp' ) ) ) . ' ' . esc_html__( 'ago', 'mail-before-cart' ) . '</td>';
+				echo '<td class="mbc-td"><span class="mbc-status ' . esc_attr( $status_class ) . '">' . esc_html( ucfirst( $e->status ) ) . '</span>' . ( $e->reminder_sent ? '<span class="mbc-status mbc-status-reminded">' . esc_html__( 'Reminded', 'mail-before-cart' ) . '</span>' : '' ) . '</td>';
+				echo '<td class="mbc-td"><button class="send-reminder-btn mbc-btn mbc-btn-small mbc-btn-primary" data-id="' . esc_attr( $e->id ) . '" data-email="' . esc_attr( $e->email ) . '">' . ( $e->reminder_sent ? esc_html__( 'Send Again', 'mail-before-cart' ) : esc_html__( 'Send Now', 'mail-before-cart' ) ) . '</button></td></tr>';
 			}
 			echo '</tbody></table></div>';
 				echo <<<'JS'
@@ -236,11 +236,11 @@ JS;
 				return; }
 			$start = ( ( $current - 1 ) * $per_page ) + 1;
 			$end   = min( $current * $per_page, $total );
-			echo '<div class="mt-4 flex justify-between items-center"><div class="text-sm text-gray-700">' . sprintf( esc_html__( 'Showing %1$d to %2$d of %3$d entries', 'mail-before-cart' ), $start, $end, $total ) . '</div><div class="flex gap-2">';
+			echo '<div class="mbc-pagination"><div class="mbc-pagination-info">' . sprintf( esc_html__( 'Showing %1$d to %2$d of %3$d entries', 'mail-before-cart' ), $start, $end, $total ) . '</div><div class="mbc-pagination-links">';
 			if ( $current > 1 ) {
-				echo '<a class="px-3 py-1 border rounded hover:bg-gray-100" href="' . esc_url( add_query_arg( 'paged', $current - 1 ) ) . '">&laquo; ' . esc_html__( 'Previous', 'mail-before-cart' ) . '</a>'; }
+				echo '<a class="mbc-page-link" href="' . esc_url( add_query_arg( 'paged', $current - 1 ) ) . '">&laquo; ' . esc_html__( 'Previous', 'mail-before-cart' ) . '</a>'; }
 			if ( $current < $pages ) {
-				echo '<a class="px-3 py-1 border rounded hover:bg-gray-100" href="' . esc_url( add_query_arg( 'paged', $current + 1 ) ) . '">' . esc_html__( 'Next', 'mail-before-cart' ) . ' &raquo;</a>'; }
+				echo '<a class="mbc-page-link" href="' . esc_url( add_query_arg( 'paged', $current + 1 ) ) . '">' . esc_html__( 'Next', 'mail-before-cart' ) . ' &raquo;</a>'; }
 			echo '</div></div>';
 		}
 
@@ -261,21 +261,21 @@ JS;
 			$subj  = get_option( 'mbcart_subject', 'Product Added to Cart' );
 			$rsubj = get_option( 'mbcart_reminder_subject', 'Complete Your Purchase' );
 			$tmpl  = get_option( 'wc_email_reminder_template', $this->default_template() );
-			echo '<form method="post" class="bg-white border rounded p-6 space-y-6">';
+			echo '<form method="post" class="mbc-settings-form">';
 			wp_nonce_field( 'mbcart_settings', 'mbcart_settings_nonce' );
-			echo '<div><h2 class="text-lg font-semibold mb-2">' . esc_html__( 'Email Field', 'mail-before-cart' ) . '</h2>';
+			echo '<div class="mbc-section"><h2 class="mbc-section-title">' . esc_html__( 'Email Field', 'mail-before-cart' ) . '</h2>';
 			$this->input_field( 'mbcart_label', __( 'Email Field Label', 'mail-before-cart' ), $label );
 			$this->input_field( 'mbcart_placeholder', __( 'Email Field Placeholder', 'mail-before-cart' ), $ph );
-			echo '</div><div><h2 class="text-lg font-semibold mb-2">' . esc_html__( 'Email Content', 'mail-before-cart' ) . '</h2>';
+			echo '</div><div class="mbc-section"><h2 class="mbc-section-title">' . esc_html__( 'Email Content', 'mail-before-cart' ) . '</h2>';
 			$this->input_field( 'mbcart_subject', __( 'Initial Email Subject', 'mail-before-cart' ), $subj );
 			$this->input_field( 'mbcart_reminder_subject', __( 'Reminder Email Subject', 'mail-before-cart' ), $rsubj );
-			echo '<label class="block text-sm font-medium mb-1" for="reminder_template">' . esc_html__( 'Reminder Email Template', 'mail-before-cart' ) . '</label>';
-			echo '<textarea class="w-full rounded border-gray-300 shadow-sm" name="reminder_template" id="reminder_template" rows="8">' . esc_textarea( $tmpl ) . '</textarea>';
-			echo '<p class="text-xs text-gray-500">' . esc_html__( 'Available: {site_name}, {customer_name}, {cart_items}, {cart_link}, {email}', 'mail-before-cart' ) . '</p>';
-			echo '</div><div><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">' . esc_html__( 'Save Settings', 'mail-before-cart' ) . '</button></div></form>';
+			echo '<label class="mbc-label" for="reminder_template">' . esc_html__( 'Reminder Email Template', 'mail-before-cart' ) . '</label>';
+			echo '<textarea class="mbc-textarea" name="reminder_template" id="reminder_template" rows="8">' . esc_textarea( $tmpl ) . '</textarea>';
+			echo '<p class="mbc-help">' . esc_html__( 'Available: {site_name}, {customer_name}, {cart_items}, {cart_link}, {email}', 'mail-before-cart' ) . '</p>';
+			echo '</div><div><button type="submit" class="mbc-btn mbc-btn-primary">' . esc_html__( 'Save Settings', 'mail-before-cart' ) . '</button></div></form>';
 		}
 		private function input_field( $name, $label, $value ) {
-			echo '<div class="mb-4"><label for="' . esc_attr( $name ) . '" class="block text-sm font-medium text-gray-700 mb-1">' . esc_html( $label ) . '</label><input class="w-full rounded border-gray-300 shadow-sm" type="text" id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" /></div>'; }
+			echo '<div class="mbc-field"><label for="' . esc_attr( $name ) . '" class="mbc-label">' . esc_html( $label ) . '</label><input class="mbc-input" type="text" id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" /></div>'; }
 		private function default_template() {
 			return '<div><h2>Hello {customer_name},</h2><p>' . esc_html__( 'You left something in your cart.', 'mail-before-cart' ) . '</p><p>{cart_items}</p><p><a href="{cart_link}">' . esc_html__( 'Complete Purchase', 'mail-before-cart' ) . '</a></p></div>'; }
 

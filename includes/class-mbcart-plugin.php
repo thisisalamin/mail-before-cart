@@ -75,10 +75,12 @@ if ( ! class_exists( 'MBCart_Plugin' ) ) {
 		}
 
 		public function frontend_assets() {
-			wp_enqueue_style( 'mbcart-tailwind', 'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css', array(), '2.2.19' ); }
+			// Enqueue custom (non-Tailwind) stylesheet.
+			wp_enqueue_style( 'mbcart-styles', MBCART_URL . 'assets/css/mbcart.css', array(), MBCART_VERSION );
+		}
 		public function admin_assets( $hook ) {
 			if ( 'woocommerce_page_wc-abandoned-emails' === $hook ) {
-				wp_enqueue_style( 'mbcart-tailwind-admin', 'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css', array(), '2.2.19' );
+				wp_enqueue_style( 'mbcart-styles', MBCART_URL . 'assets/css/mbcart.css', array(), MBCART_VERSION );
 			}
 		}
 
@@ -92,8 +94,8 @@ if ( ! class_exists( 'MBCart_Plugin' ) ) {
 			$placeholder = get_option( 'mbcart_placeholder', 'your@email.com' );
 			?>
 			<p class="email-before-add-to-cart">
-				<label for="customer_email" class="text-gray-700 font-medium"><?php echo esc_html( $label ); ?></label>
-				<input type="email" id="customer_email" name="customer_email" required placeholder="<?php echo esc_attr( $placeholder ); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+				<label for="customer_email" class="mbc-field-label"><?php echo esc_html( $label ); ?></label>
+				<input type="email" id="customer_email" name="customer_email" required placeholder="<?php echo esc_attr( $placeholder ); ?>" class="mbc-input" />
 			</p>
 			<script>
 			(function($){$('form.cart').on('submit',function(e){var email=$('#customer_email').val();if(!email){alert('<?php echo esc_js( __( 'Please enter your email before adding this item to the cart.', 'mail-before-cart' ) ); ?>');e.preventDefault();return false;}$.post('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',{action:'wc_check_email_exists',email:email},function(r){if(r.exists){alert('<?php echo esc_js( __( 'This email is already in use. Please use a different email.', 'mail-before-cart' ) ); ?>');e.preventDefault();return false;}else{localStorage.setItem('customer_email',email);}});});})(jQuery);
