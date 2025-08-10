@@ -37,7 +37,6 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 
 		public function render_page() {
 			$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'dashboard'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			wp_enqueue_script( 'chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true );
 			wp_enqueue_script( 'jquery' );
 			echo '<div class="wrap mbc-wrap"><div class="mbc-container">';
 			echo '<h1 class="mbc-page-title">' . esc_html__( 'Mail Before Cart', 'mail-before-cart' ) . '</h1>';
@@ -77,11 +76,6 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			$t = $wpdb->prefix . 'mbcart_tracking';
 			return $wpdb->get_row( "SELECT COUNT(*) total_emails, SUM(CASE WHEN reminder_sent=1 THEN 1 ELSE 0 END) total_reminders, SUM(CASE WHEN status='purchased' THEN 1 ELSE 0 END) total_conversions, SUM(CASE WHEN DATE(created_at)=CURDATE() THEN 1 ELSE 0 END) today_emails FROM {$t}" );
 		}
-		private function get_daily_stats() {
-			global $wpdb;
-			$t = $wpdb->prefix . 'mbcart_tracking';
-			return $wpdb->get_results( "SELECT DATE(created_at) date, COUNT(*) total, SUM(CASE WHEN status='purchased' THEN 1 ELSE 0 END) conversions FROM {$t} WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) GROUP BY DATE(created_at) ORDER BY date ASC" );
-		}
 		private function build_filters( &$wc, &$params ) {
 			$where  = array( '1=1' );
 			$p      = array();
@@ -112,7 +106,6 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 		}
 		private function render_dashboard() {
 			$stats    = $this->get_stats();
-			$daily    = $this->get_daily_stats();
 			$per_page = 10;
 			$current  = max( 1, isset( $_GET['paged'] ) ? (int) $_GET['paged'] : 1 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$offset   = ( $current - 1 ) * $per_page;
@@ -124,7 +117,6 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			$pages   = (int) ceil( $total / $per_page );
 			$this->dashboard_filters();
 			$this->stat_cards( $stats );
-			$this->charts( $stats, $daily );
 			$this->entries_table( $entries );
 			$this->pagination( $current, $per_page, $total, $pages );
 		}
@@ -182,10 +174,7 @@ if ( ! class_exists( 'MBCart_Admin' ) ) {
 			echo '<input type="hidden" name="action" value="clear_all_stats" />';
 			echo '<button class="mbc-btn mbc-btn-danger" type="submit">' . esc_html__( 'Clear All Statistics', 'mail-before-cart' ) . '</button></form>';
 		}
-		private function charts( $stats, $daily ) {
-			echo '<div class="mbc-charts"><canvas id="activityChart" height="140"></canvas><canvas id="statusChart" height="140"></canvas></div>';
-			echo '<script>(function(){const dL=' . wp_json_encode( wp_list_pluck( $daily, 'date' ) ) . ',dT=' . wp_json_encode( wp_list_pluck( $daily, 'total' ) ) . ',dC=' . wp_json_encode( wp_list_pluck( $daily, 'conversions' ) ) . ';window.addEventListener("load",function(){if(window.Chart){new Chart(document.getElementById("activityChart"),{type:"line",data:{labels:dL,datasets:[{label:"' . esc_js( __( 'Emails Captured', 'mail-before-cart' ) ) . '",data:dT,borderColor:"#3b82f6",tension:.1},{label:"' . esc_js( __( 'Conversions', 'mail-before-cart' ) ) . '",data:dC,borderColor:"#22c55e",tension:.1}]}});new Chart(document.getElementById("statusChart"),{type:"doughnut",data:{labels:[' . wp_json_encode( array( __( 'Pending', 'mail-before-cart' ), __( 'Purchased', 'mail-before-cart' ), __( 'Reminded', 'mail-before-cart' ) ) ) . '],datasets:[{data:[' . ( (int) $stats->total_emails - (int) $stats->total_conversions ) . ',' . (int) $stats->total_conversions . ',' . (int) $stats->total_reminders . '],backgroundColor:["#eab308","#22c55e","#9333ea"]}]}});}})();</script>';
-		}
+
 		private function entries_table( $entries ) {
 			if ( ! $entries ) {
 				echo '<div class="mbc-empty">' . esc_html__( 'No emails captured yet.', 'mail-before-cart' ) . '</div>';
@@ -360,7 +349,8 @@ JS;
 						'message'    => __( 'Email sent', 'mail-before-cart' ),
 						'buttonText' => __( 'Send Again', 'mail-before-cart' ),
 					)
-				); }
+				);
+			}
 			wp_send_json_error( __( 'Failed to send email', 'mail-before-cart' ) );
 		}
 	}

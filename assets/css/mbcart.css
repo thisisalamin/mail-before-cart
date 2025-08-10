@@ -58,8 +58,6 @@
 .text-yellow-600 {color:var(--mbc-warning);}
 /* Clear form */
 .mbc-clear-form {text-align:right;margin:0 0 24px;}
-/* Charts */
-.mbc-charts {display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;margin:0 0 32px;}
 /* Table */
 .mbc-table-wrap {background:#fff;border:1px solid var(--mbc-border);border-radius:var(--mbc-radius);overflow:hidden;box-shadow:var(--mbc-shadow);}
 .mbc-table {width:100%;border-collapse:collapse;font-size:13px;}
